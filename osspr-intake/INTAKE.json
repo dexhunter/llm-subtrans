@@ -1,0 +1,60 @@
+[
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "e82a058993f40e5c9e0f1ab1fb4539bbfba4426a",
+    "file": "PySubtrans/Transcription/WordAlignment.py",
+    "function": "AlignWords",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_Transcription.TestDerivedParts",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_align_words.py",
+    "baseline_median_ms": 519.093,
+    "baseline_noise_pct": 0.9873,
+    "tests_pass_on_baseline": true,
+    "workload": "One 10.4 minute verbatim chunk: 2400 English words at 0.26s, transcript adds a full stop every 18 words, matching a Gemini or ElevenLabs chunk (those providers cap a request at 600-900s).",
+    "notes": "AlignWords runs difflib.SequenceMatcher with autojunk=False over every spoken character. Common letters are indexed at every position, so a near-verbatim chunk is quadratic: 1200 words were ~141ms and these 2400 words are 519ms. An order-preserving scan of the word characters, using SequenceMatcher only on spans that do not already match, returns the same blocks for this verbatim case and for the derived-part tests."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "e82a058993f40e5c9e0f1ab1fb4539bbfba4426a",
+    "file": "PySubtrans/Transcription/UtteranceSplitter.py",
+    "function": "UtteranceSplitter._best_split_index",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_Transcription.TestOverlongUtteranceSplitting",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_utterance_split.py",
+    "baseline_median_ms": 464.064,
+    "baseline_noise_pct": 1.2711,
+    "tests_pass_on_baseline": true,
+    "workload": "Twenty-four unpunctuated 180-word chunks (0.28s per word, about 50s each, just under the default 60s local chunk cap) scored for a single cut at a 42-character limit.",
+    "notes": "Every candidate boundary calls JoinWords on the whole head and the whole tail only to read len(). JoinWords rebuilds the string and checks script, category, and quote parity per token, so one 180-word chunk is tens of milliseconds and twenty-four chunks are 464ms. The chosen index depends on those lengths plus the pause and punctuation of the boundary word, so an incremental length and quote-parity scan inside this function returns the same index."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "e82a058993f40e5c9e0f1ab1fb4539bbfba4426a",
+    "file": "PySubtrans/SubtitleBatcher.py",
+    "function": "SubtitleBatcher._split_lines",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_SubtitleBuilder",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_batch_split_memory.py",
+    "metric_kind": "peak_memory_bytes",
+    "baseline_value": 25901452,
+    "baseline_noise_pct": 0.0,
+    "metric_benchmark": "./envsubtrans/bin/python osspr-intake/harness/bench_batch_split_memory.py",
+    "labeled_data": null,
+    "tests_pass_on_baseline": true,
+    "workload": "One scene of 8000 evenly timed auto-caption lines (2.0s cues, identical 83ms gaps, default min batch 10 and max batch 100). No gap exceeds the 60s scene threshold, so batching never leaves this scene.",
+    "notes": "Equal gaps make the earliest maximum win, so each call peels min_batch_size lines and recurses on a newly sliced suffix. Every suffix stays live on the stack: tracemalloc peaks at 25901452 bytes for 8000 lines, and the same call is about 0.6s. Past roughly 10000 lines the recursion raises RecursionError. Splitting by index ranges, still taking the earliest maximum gap, keeps the same batches and drops the retained copies. Input lines are allocated before tracing."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "e82a058993f40e5c9e0f1ab1fb4539bbfba4426a",
+    "file": "PySubtrans/TranslationPrompt.py",
+    "function": "TranslationPrompt.GenerateBatchPrompt",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_TranslationSpeaker",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_prompt_tokens.py",
+    "metric_kind": "token_count",
+    "baseline_value": 2721,
+    "baseline_noise_pct": 0.0,
+    "metric_benchmark": "./envsubtrans/bin/python osspr-intake/harness/bench_prompt_tokens.py",
+    "labeled_data": null,
+    "tests_pass_on_baseline": true,
+    "workload": "One default-size batch of 100 spoken lines with alternating speakers, plus description, names, terminology, scene, summary, and ten history lines (max_context_summaries).",
+    "notes": "Counted with tiktoken cl100k_base (the GPT-4 encoding the OpenAI provider targets) from a vendored BPE file, so the count does not use the network. The repo has no tokenizer of its own. The prompt is 2721 tokens; the dialogue text alone is 1302 and the context block is 263, leaving 1156 tokens of repeated Original>/Translation> labels and blank separators. The primary response pattern already allows flexible whitespace, so those separators can shrink without changing the line text, numbers, speakers, or context values."
+  }
+]
