@@ -1,0 +1,57 @@
+[
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "452d726ab1b7bfd444accec854a249f8ac4dcfbd",
+    "file": "PySubtrans/TranslationParser.py",
+    "function": "TranslationParser.ProcessTranslation",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_TranslationParser",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_parse_response.py",
+    "baseline_median_ms": 229.990,
+    "baseline_noise_pct": 22.4350,
+    "tests_pass_on_baseline": true,
+    "workload": "One default batch of 100 lines whose response is numbered blocks separated by a blank line and never contains a Translation> tag, the shape the final fallback already accepts.",
+    "notes": "ProcessTranslation tries the primary pattern first. Its original-group quantifier backtracks over the whole batch when that tag is absent: 50 short lines were about 12ms, 100 about 47ms and 200 about 205ms, and these 100 full lines are 230ms, after which the last fallback matches in about 1ms. The primary pattern cannot match text that lacks the tag, and compiling it with possessive quantifiers returned the same groups on the labelled responses this parser already handles, so the same 100 lines come back without the backtracking."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "452d726ab1b7bfd444accec854a249f8ac4dcfbd",
+    "file": "PySubtrans/Transcription/LineMerger.py",
+    "function": "LineMerger._sliver_runs",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_Transcription.TestSliverMergeLimits",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_sliver_runs.py",
+    "baseline_median_ms": 73.189,
+    "baseline_noise_pct": 10.7680,
+    "tests_pass_on_baseline": true,
+    "workload": "2400 one-word lines from one speaker, each 0.24s long and 0.26s apart: a 10.4 minute word-level chunk whose gaps sit inside the same-speaker merge window.",
+    "notes": "Every accepted line asks _merge_eligible for the latest end of the run, and that walks every line already kept. One same-speaker chunk stays a single run, so 2400 lines cost 73ms. The run only grows by append, so keeping that latest end as lines are added produced the same single run in about 3ms."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "452d726ab1b7bfd444accec854a249f8ac4dcfbd",
+    "file": "PySubtrans/Transcription/AudioExtractor.py",
+    "function": "AudioExtractor.QuietestStretch",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_Transcription.TestQuietestStretch",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_quietest_stretch.py",
+    "baseline_median_ms": 413.769,
+    "baseline_noise_pct": 13.9861,
+    "tests_pass_on_baseline": true,
+    "workload": "120 scans of 5 seconds at 16kHz mono, the default quiet-scan window, one per 60s chunk of a two-hour clip that had no silence to cut on.",
+    "notes": "Each 10ms frame is sliced out of the int16 buffer and summed in Python, 80,000 samples per scan. A numpy sum of squares over those same non-overlapping frames, still taking the latest minimum, returned the same stretch about eight times faster."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "452d726ab1b7bfd444accec854a249f8ac4dcfbd",
+    "file": "PySubtrans/Formats/SrtFileHandler.py",
+    "function": "SrtFileHandler.compose",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_SubtitleProjectFormats.TestSubtitleProjectFormats",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_srt_compose_memory.py",
+    "metric_kind": "peak_memory_bytes",
+    "baseline_value": 4347243,
+    "baseline_noise_pct": 0.0140,
+    "metric_benchmark": "./envsubtrans/bin/python osspr-intake/harness/bench_srt_compose_memory.py",
+    "labeled_data": null,
+    "tests_pass_on_baseline": true,
+    "workload": "7200 one-second cues, a dense two-hour SRT, composed with tracemalloc after the input lines already exist.",
+    "notes": "compose copies every cue into a new SubtitleLine and an srt.Subtitle, then joins those. The traced peak is 4347243 bytes for an output of about 0.73MB. Writing each cue's index, timestamps and text directly peaked near 1.8MB and parsed back to the same cues."
+  }
+]
