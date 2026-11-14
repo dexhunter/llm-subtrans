@@ -1,0 +1,57 @@
+[
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "880e8bca69842bf68222128a1d5940ab5a495921",
+    "file": "PySubtrans/Helpers/Languages.py",
+    "function": "_language_endonyms",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_Languages.TestLanguages",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_language_endonyms.py",
+    "metric_kind": "peak_memory_bytes",
+    "baseline_value": 117155155,
+    "baseline_noise_pct": 0.0016,
+    "metric_benchmark": "./envsubtrans/bin/python osspr-intake/harness/bench_language_endonyms.py",
+    "labeled_data": null,
+    "tests_pass_on_baseline": true,
+    "workload": "One cold build of the native-name map used when a language hint is not English, such as Deutsch or 中文, after Babel's global tables are already loaded.",
+    "notes": "localedata.load parses a locale and caches the whole CLDR tree, and each language copies the root locale into that cache. The returned map is 308 names. Extracting the endonym and dropping that language's cache entry before the next load built the same map, including deutsch, 中文, 日本語 and 한국어, and peaked near 4MB instead of 117MB."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "880e8bca69842bf68222128a1d5940ab5a495921",
+    "file": "PySubtrans/Subtitles.py",
+    "function": "Subtitles._extend_short_subtitles",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_Subtitles.SubtitleTimingTests",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_extend_short.py",
+    "baseline_median_ms": 69.040,
+    "baseline_noise_pct": 2.4750,
+    "tests_pass_on_baseline": true,
+    "workload": "Saving 8000 translated cues with extend_short_subtitles on, each 0.4s long and 1.6s before the next, at the default 0.1s per visible character. The last cue is the family-emoji line the timing tests count as three graphemes.",
+    "notes": "Every cue runs GRAPHEME_PATTERN.findall and then drops whitespace, which builds a string per cluster. On this file that count was about 48ms of the 69ms. Lines with no combining marks, joiners or regional indicators have one cluster per code point, and a translate-and-len count of those lines matched the regex, including the three-grapheme emoji cue via the regex fallback, in about 16ms."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "880e8bca69842bf68222128a1d5940ab5a495921",
+    "file": "PySubtrans/Transcription/LineMerger.py",
+    "function": "LineMerger._balanced_chunks",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_Transcription.TestSliverMergeLimits",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_balanced_chunks.py",
+    "baseline_median_ms": 22.769,
+    "baseline_noise_pct": 1.0615,
+    "tests_pass_on_baseline": true,
+    "workload": "One same-speaker run of 2400 one-word lines, each 0.24s long and 0.26s apart, divided at the default 120-character and 4.0-second line limits.",
+    "notes": "The search tries every piece count and merges a chunk's text before reading its duration, which is already the first start and the last end. Rejecting a count from that span, and merging only counts that can fit, returned the same 300 chunks of 8 lines in about 8ms. _sliver_runs is a different function and is not part of this call."
+  },
+  {
+    "upstream_repo": "machinewrapped/llm-subtrans",
+    "head_sha": "880e8bca69842bf68222128a1d5940ab5a495921",
+    "file": "PySubtrans/Formats/VttFileHandler.py",
+    "function": "VttFileHandler._process_vtt_text",
+    "native_test_cmd": "./envsubtrans/bin/python -m unittest tests.PySubtransTests.test_VttFileHandler.TestVttFileHandler",
+    "bench_cmd": "./envsubtrans/bin/python osspr-intake/harness/bench_vtt_voice.py",
+    "baseline_median_ms": 29.504,
+    "baseline_noise_pct": 5.6755,
+    "tests_pass_on_baseline": true,
+    "workload": "7200 cue texts from a two-hour WebVTT, one a second, each wrapped in a single <v.loud Narrator> tag the way a voiced caption names the speaker.",
+    "notes": "The voice pattern's negative lookahead walks every character of a cue that is one voice tag. A direct scan for a single <v> wrapper matched the voice-tag cases this handler already tests, left a tag that does not wrap the cue untouched, and processed these 7200 cues in about 11ms. parse_string of the same file was about 78ms, and this function was the voice-tag part of that parse."
+  }
+]
